@@ -1,0 +1,18 @@
+#!/bin/bash
+
+
+if [ $# = 1 ]; then
+        read f <<< "$(locate $1 | grep $PWD | head -1 )" && vim "$f"
+elif [ $# = 2 ]; then
+        while read f; do
+                if grep -q "$2" "$f"; then
+                        file="$f"
+                        break
+                fi
+        done <<< "$(locate $1 | grep $PWD)"
+        vim $file
+elif [ $# = 0 ]; then
+	echo "Usage: $(basename $0) <filename> [<word_in_file>]"
+	exit 0
+fi
+
