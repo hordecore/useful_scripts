@@ -78,13 +78,7 @@ message="$(</tmp/sendtomail)"
 if [ -n "$message" ]; then
 	# subject="Subject: Паника ужас безумие не сработал бэкап"
 	subject="Subject: Результат бэкапов $(date)"
-	echo -e "$subject \n\n $message" | msmtp oleg@ideco.ru
-	sleep 2
-	echo -e "$subject \n\n $message" | msmtp osv@ideco.ru
-	sleep 2
-	echo -e "$subject \n\n $message" | msmtp ignat@ideco.ru
-	sleep 2
-	echo -e "$subject \n\n $message" | msmtp v.metikov@ideco.ru
+	echo -e "$subject \n\n $message" | msmtp username@mailserver.ru
 	sleep 2
 	rm -f /tmp/sendtomail
 fi 
