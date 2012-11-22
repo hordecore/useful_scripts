@@ -1,0 +1,95 @@
+#!/bin/bash
+
+REMOTEHOST=10.90.1.120
+# exec 1>>/var/log/rdiff.log
+# exec 2>>/var/log/rdiff_err.log
+MACHINES="/etc/rdiff-backup/machines"
+BACKUPDIR="/storage/backup/daily/$(date +%u)"/
+SSH="ssh root@$REMOTEHOST"
+ALARM_COUNT=0
+# разбор параметров
+case $1 in
+	--dir* )
+		BACKUPDIR=$2
+		shift; shift
+		;;
+
+esac
+
+# если нет конфига
+[ -f "$MACHINES" ] || exit 2
+
+# если папки для бэкапов нет - создать её
+if [ ! -w "$BACKUPDIR" -o ! -d "$BACKUPDIR" ]; then
+	mkdir -p "$BACKUPDIR" 
+fi
+
+ALARM() {
+	echo $@ >> '/home/oleg/Рабочий стол/backup.result'
+	echo $@ >> '/tmp/sendtomail'
+}
+
+echo "Start time: $(date +%H:%M:%S)"
+while read MACHINE; do
+
+	# паузим виртуалку
+	[ ! -d "$BACKUPDIR$MACHINE/xml/" -o ! -w "$BACKUPDIR$MACHINE/xml/" ] && mkdir -p "$BACKUPDIR$MACHINE/xml/" 
+	echo "virsh dumpxml $MACHINE" | $SSH | sudo tee "$BACKUPDIR$MACHINE/xml/$MACHINE.xml"
+	echo "virsh save $MACHINE /tmp/$MACHINE" | $SSH
+
+	# ждём пока она вырубится
+	ITERATION=0
+	while true; do
+		date >&2
+		echo "virsh list" | $SSH | grep -w "$MACHINE "
+		[ $? = 0 ] && sleep 10 || break
+		((ITERATION++))
+		[ "$ITERATION" -gt 30 ] && break
+	done
+	[ "$ITERATION" -gt 30 ] && break
+
+	# получаем список дисков
+	LIST=$(egrep -o "/.*(img|qcow|qcow2)" "$BACKUPDIR$MACHINE/xml/$MACHINE.xml")
+	for i in $LIST; do
+		# копируем их на удаленном хосте в temp
+		echo $i
+		echo "cp -f $i /tmp/${i##*/}" | $SSH 
+	done
+
+	# стартуем виртуалку чтобы не простаивала
+	echo "virsh restore /tmp/$MACHINE; rm -f /tmp/$MACHINE" | $SSH
+
+	# забираем rdiff'ом
+	for i in $LIST; do
+		RDIR="/tmp/"
+		PATTERN="${i##*/}"
+		LDIR="$BACKUPDIR$MACHINE/${PATTERN%.*}"
+		mkdir -p "$LDIR" 
+		# ебал я этот rdiff
+		rdiff-backup --force --create-full-path --exclude-symbolic-links --exclude-sockets --exclude-special-files --exclude-fifos --exclude-device-files --include-regexp ".*($PATTERN)"  --exclude $RDIR $REMOTEHOST::$RDIR $LDIR
+		find $BACKUPDIR -name "$PATTERN" &>/dev/null && ALARM "Successful $PATTERN in $BACKUPDIR" || ALARM "FAIL!!! $BACKUPDIR NO $PATTERN ALLES KAPUTEN!"
+		echo '... Done!'
+		echo "rm -f $RDIR$PATTERN" | $SSH
+	done 
+done < $MACHINES
+echo "End time: $(date +%H:%M:%S)"
+
+message="$(</tmp/sendtomail)"
+if [ -n "$message" ]; then
+	# subject="Subject: Паника ужас безумие не сработал бэкап"
+	subject="Subject: Результат бэкапов $(date)"
+	echo -e "$subject \n\n $message" | msmtp oleg@ideco.ru
+	sleep 2
+	echo -e "$subject \n\n $message" | msmtp osv@ideco.ru
+	sleep 2
+	echo -e "$subject \n\n $message" | msmtp ignat@ideco.ru
+	sleep 2
+	echo -e "$subject \n\n $message" | msmtp v.metikov@ideco.ru
+	sleep 2
+	rm -f /tmp/sendtomail
+fi 
+
+# принудительно ещё раз стартанём все виртуалки
+while read MACHINE; do
+	echo "virsh start $MACHINE" | $SSH
+done < $MACHINES
