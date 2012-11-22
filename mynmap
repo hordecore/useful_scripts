@@ -1,0 +1,10 @@
+#!/bin/bash
+
+[ -n "$1" ] && net=$1 || net=140
+
+for i in `seq 1 255`; do 
+{
+	ping -c 1 -W 1  10.90.$net.$i &>/dev/null && echo 10.90.$net.$i
+} &
+done
+wait
