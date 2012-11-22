@@ -1,0 +1,6 @@
+#!/bin/bash
+
+INPUT="$1"
+
+iconv -f utf-8 -t koi8-r < "$INPUT" > "$INPUT"u
+mv "$INPUT"u "$INPUT"
