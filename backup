@@ -1,0 +1,4 @@
+#!/bin/bash
+[ ! -d ./BACKUP ] && mkdir BACKUP
+cp "$1" ./BACKUP/"${1##*/}".`date +%d-%m-%y_%H-%M-%S`
+
