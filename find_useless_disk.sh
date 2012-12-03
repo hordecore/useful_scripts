@@ -10,7 +10,7 @@ do
 	fi
 done > "$TMPFILE"
 
-ls $STORAGE | while read disk
+ls $STORAGE | grep -v *.xml | while read disk
 do
 	grep -q $disk $TMPFILE || echo $disk
 done
