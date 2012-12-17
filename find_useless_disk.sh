@@ -1,7 +1,7 @@
 #!/bin/bash
 
 TMPFILE=/tmp/$(basename $0).$$
-STORAGE=${1:-/qemu/img}
+STORAGE=${1:-/qemu/img/}
 
 virsh list --all | tail -n +3 | while read num name state
 do 
@@ -12,7 +12,9 @@ done > "$TMPFILE"
 
 ls $STORAGE | grep -v *.xml | while read disk
 do
-	grep -q $disk $TMPFILE || echo $disk
-done
+	if ! grep -q $disk $TMPFILE; then
+		echo -e "$(du -sh $STORAGE$disk | awk '{print $1}')\t$disk"
+	fi
+done 
 
 rm -f $TMPFILE
