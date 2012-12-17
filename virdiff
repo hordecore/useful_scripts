@@ -1,5 +1,6 @@
 #!/bin/bash
 
+EMAIL="admin@host.ru"
 REMOTEHOST=10.90.1.120
 # exec 1>>/var/log/rdiff.log
 # exec 2>>/var/log/rdiff_err.log
@@ -25,7 +26,6 @@ if [ ! -w "$BACKUPDIR" -o ! -d "$BACKUPDIR" ]; then
 fi
 
 ALARM() {
-	echo $@ >> '/home/oleg/Рабочий стол/backup.result'
 	echo $@ >> '/tmp/sendtomail'
 }
 
@@ -75,10 +75,10 @@ done < $MACHINES
 echo "End time: $(date +%H:%M:%S)"
 
 message="$(</tmp/sendtomail)"
-if [ -n "$message" ]; then
+if [ -n "$message" -a -n "$EMAIL" ]; then
 	# subject="Subject: Паника ужас безумие не сработал бэкап"
 	subject="Subject: Результат бэкапов $(date)"
-	echo -e "$subject \n\n $message" | msmtp username@mailserver.ru
+	echo -e "$subject \n\n $message" | msmtp "$EMAIL"
 	sleep 2
 	rm -f /tmp/sendtomail
 fi 
