@@ -3,13 +3,20 @@
 [ ! -x `which wget` ] && echo 'No wget, no ithappens!' && exit 1
 [ ! -x `which wkhtmltopdf` ] && echo 'No wkhtmltopdf, no ithappens!' && exit 2
 
-mkdir /tmp/ithappens_wget/
-cd /tmp/ithappens_wget/
-for ((i=1144; i>0; i--)); do 
-	wget http://ithappens.ru/page/$i -O $i.html; 
-done
+get_content() {
+	mkdir /tmp/ithappens_wget/
+	cd /tmp/ithappens_wget/
+	for ((i=1144; i>0; i--)); do 
+		wget http://ithappens.ru/page/$i -O $i; 
+	done
+}
 
-cat > final.html <<EOF
+parse_content() {
+	ls [0-9]* | sort -n | xargs cat | egrep "(<p class=.*text|<h3)" >> final.html.tmp
+}
+
+prepare_content() {
+	cat > final.html <<EOF
 <html>
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=cp1251">
@@ -18,14 +25,26 @@ cat > final.html <<EOF
 	<body>
 EOF
 
-ls [0-9]* | sort -n | xargs cat | egrep "(<p class=.*text|<h3)" >> final.html
+	cat final.html.tmp > final.html
 
-cat >> final.html <<EOF
+	cat >> final.html <<EOF
 	</body>
 </html>
 EOF
+}
 
-touch ithappens.pdf
-wkhtmltopdf -s Letter final.html ithappens.pdf
-cp ithappens.pdf ~/
-echo "Your file is ready to read: $HOME/ithappens.pdf"
+convert_to_pdf() {
+	touch ithappens.pdf
+	wkhtmltopdf -s Letter final.html ithappens.pdf
+	cp ithappens.pdf ~/
+	echo "Your file is ready to read: $HOME/ithappens.pdf"
+}
+
+main() {
+	get_content
+	parse_content
+	prepare_content
+	convert_to_pdf
+}
+
+main
