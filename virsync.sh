@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Бэкапятся только виртуальные машины с флагом autostart
+# Можно переправить эту логику в строке 76, главное передать на
+# stdin while read'а построчно список виртуальных машин
+
 REMOTEHOST=10.0.0.44
 MACHINES="/etc/rdiff-backup/machines"
 BACKUPDIR="/backups/backups/${1:-daily}/"
