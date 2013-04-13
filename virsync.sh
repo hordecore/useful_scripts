@@ -14,14 +14,6 @@ if ! ping -c 1 $REMOTEHOST; then
 	exit 3
 fi
 
-# разбор параметров
-case $1 in
-	--dir* )
-		BACKUPDIR=$2
-		shift; shift
-		;;
-esac
-
 ALARM() {
 	echo $@
 	echo $@ >> /tmp/sendtomail
@@ -31,23 +23,18 @@ SSH() {
 	echo $@ | ssh root@$REMOTEHOST
 }
 
-
-# если нет конфига
-[ ! -f "$MACHINES" ] && ALARM 'No config!' && exit 2
-
-# если папки для бэкапов нет - создать её
 mkdir -p "$BACKUPDIR" 
 
 ALARM "Start time: $(date +%H:%M:%S)"
 
 while read MACHINE; do
-	# паузим виртуалку
+	# собираем данные
 	mkdir -p "${BACKUPDIR}/${MACHINE}/xml/" 
 	SSH "virsh dumpxml $MACHINE" > "$BACKUPDIR$MACHINE/xml/$MACHINE.xml"
+	# паузим виртуалку
 	SSH "virsh save $MACHINE /tmp/$MACHINE" 
 
 	# ждём пока она вырубится
-	
 	ITERATION=0
 	while true; do
 		date >&2
@@ -58,23 +45,20 @@ while read MACHINE; do
 	done
 	[ "$ITERATION" -gt 30 ] && break
 
-	# получаем список дисков
-	LIST=$(egrep -o "/.*(img|qcow|qcow2)" "$BACKUPDIR$MACHINE/xml/$MACHINE.xml")
-
-	# забираем rsync'ом
-	for i in $LIST; do
+	# забираем rsync'ом диски
+	for i in $(egrep -o "/.*(img|qcow|qcow2)" "$BACKUPDIR$MACHINE/xml/$MACHINE.xml"); do
 		LDIR="${BACKUPDIR}/${MACHINE}/"
 		mkdir -p "$LDIR" 
+		ALARM Starting: rsync --compress-level=2 --block-size 32000 -P -avz "root@$REMOTEHOST:$i" "$LDIR"
 		rsync --compress-level=2 --block-size 32000 -P -avz "root@$REMOTEHOST:$i" "$LDIR"
 		find $BACKUPDIR -name "$PATTERN" &>/dev/null && ALARM "Successful $i in $LDIR" || ALARM "FAIL!!! $BACKUPDIR NO $PATTERN ALLES KAPUTEN!"
 		ALARM '... Done!'
 		SSH "rm -f $RDIR$PATTERN" 
 	done 
 
-	# стартуем виртуалку чтобы не простаивала
 	SSH "virsh restore /tmp/$MACHINE; rm -f /tmp/$MACHINE" 
 done <<< "$(SSH "ls /etc/libvirt/qemu/autostart/ | sed -e 's/.xml//g'")"
-# $MACHINES
+
 ALARM "End time: $(date +%H:%M:%S)"
 
 message="$(echo -e 'Backup log:\n';  cat /tmp/sendtomail)"
@@ -87,8 +71,7 @@ if [ -n "$message" ]; then
 	rm -f /tmp/sendtomail
 fi 
 
-# принудительно ещё раз стартанём все виртуалки
-# возможно удалять save и start
+# принудительно ещё раз стартанём все виртуалки, возможно стоит удалять save и start
 while read MACHINE; do
 	SSH "virsh start $MACHINE" 
 done < $MACHINES
