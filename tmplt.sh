@@ -2,13 +2,14 @@
 
 TMPLOG=/tmp/$(basename $0).log
 > $TMPLOG
+LOGILE=/var/log/$(basename $0).log
 
 terminate() {
         local retval=$1
         shift
         echo "$@"
         echo
-        cat $TMPLOG
+        cat $TMPLOG >> $LOGFILE
         rm -f "$TMPLOG"
         exit $retval
 }
@@ -35,3 +36,4 @@ main() {
 }
 
 main $@
+cat $TMPLOG >> $LOGFILE
