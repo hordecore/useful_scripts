@@ -1,0 +1,153 @@
+#!/bin/bash
+
+set -x
+[ $UID = 0 ] || exit 66
+
+if [ "$1" = 'master' -o "$1" = 'devel' ]; then
+	branch="$1"; shift
+fi
+parse()
+{
+	while [ "$#" -gt 0 ]; do
+		case "$1" in
+		--help )
+			showhelp
+			exit 0
+			;;
+		--*=* )
+			var="${1##*-}" var="${var%%=*}" var="$(echo $var | tr [a-z] [A-Z] )"
+			val="${1##*=}"
+			eval $var=$val
+			;;
+		--* )
+			var="${1##*-}" val="$(echo $var | tr [a-z] [A-Z] )"
+			eval $val=1
+			;;
+		"asr" | "ASR" | "IdecoASR" | "IdecoACP" | "acp" | "ACP" | "АСР" | "аср" )
+			PRODUCT='IdecoASR'
+			FPRODUCT='IdecoACP'
+			;;
+		"AS" | "NAS" | "as" | "nas" | "IdecoAS" | "IdecoNAS" | "НАС" | "нас" )
+			PRODUCT='IdecoAS'
+			FPRODUCT='IdecoAS'
+			;;
+		[0-9]* )
+			VERSION="$(echo $1 | sed 's/./&./g; s/.$//')"
+			if [[ "$2" == [0-9]* ]]; then
+				BUILD="$2"
+				if [ -n "$branch" ]; then
+					FILENAME="${PRODUCT}_${branch}_${1}_${BUILD}.iso"
+				else
+					FILENAME="${PRODUCT}_${1}_${BUILD}.iso"
+				fi
+				shift
+			else
+				FILENAME="$( ftplist upload/$FPRODUCT/$VERSION | tail -1 | awk '{print $9}' )"
+				BUILD="${FILENAME##*_}" BUILD="${BUILD%%.iso}"
+			fi
+			;;
+	esac
+	shift
+done
+
+[ ! -n "$VERSION" ]  && VERSION="$( ftplist upload/$FPRODUCT | tail -1 | tr ' ' '\n' | tail -1 )"
+[ ! -n "$FILENAME" ] && FILENAME="$( ftplist upload/$FPRODUCT/$VERSION | tail -1 | tr ' ' '\n' | tail -1 )"
+[ ! -n "$BUILD" ]    && BUILD="${FILENAME##*_}" BUILD="${BUILD%%.iso}"
+FTPISO=upload/$FPRODUCT/${VERSION}/${FILENAME}
+[ $DEBUG = 1 ] && echo $FTPISO
+download $FTPISO
+}
+
+download() 
+{
+	# todo проверять скачалось ли
+	[ ! -d "$STORAGE" ] && exit 43
+	cd $STORAGE
+	echo "$1"
+	if [ ! -f "${1##*/}" ]; then
+		echo "cd ${1%/*}
+		get ${1##*/}" | ftp $SRV || return 1
+	fi
+	ISO=$STORAGE/${1##*/}
+	echo $ISO
+	[ -f "$ISO" ] && install || exit 44
+}
+
+ftplist() 
+{
+	echo "ls $1" | ftp $SRV || return 1
+}
+
+install() 
+{
+	[ ! -n "$NAME" ] && NAME=${FILENAME//.iso/}
+	[ -n "$OWNER" ] && NAME=${OWNER}_${NAME}
+	OPTS="-r 512 --vcpus=2 --os-type=linux --os-variant=generic24 --network bridge=br0,model='e1000' --network bridge=br1,model='e1000'"
+	DSKOPTS="--disk path=$QEMU$NAME.img,size=${SIZE:-12},format='qcow2',cache='writeback'"
+	if [ "$DEBUG" = "0" ]; then
+		echo "sudo virt-install -n $NAME -c $ISO $OPTS $DSKOPTS & [ $? = 0 ]" | bash 
+		echo 'Errorcode: ' $?
+	else 
+		echo 'Installation started!'
+		echo "sudo virt-install -n $NAME -c $ISO $OPTS $DSKOPTS" 
+		exit 0
+		return 0
+	fi
+	sleep 5
+	if [ "$MANUAL" = 1 ]; then
+		echo "А дальше сам."
+		exit 0
+	fi
+	[ "$DEBUG" = 1 ] && exit 1
+	xdotool type 'setup100hz'	
+	xdotool key 'Return'
+	sleep 20
+	for i in `seq 1 8`; do xdotool key 'Return'; done
+	sleep 60
+	xdotool key 'Return'
+	sleep 20
+	while sudo virsh list | grep $NAME; do
+		sleep 1
+	done
+	sleep 5
+	svirt $NAME
+	sleep 5
+	mynmap | while IFS=. read t t t f; do echo $f; done > /tmp/file
+	read ip <<< "$(for i in `seq 2 15`; do grep -q -w $i /tmp/file || { echo $i; break; }; done)"
+	sleep 45
+	asrsetup $ip
+	# logic of grep by $NAME + xdotool
+	# auto y in svirt
+	# auto get free ip in svirt
+	sleep 15
+	sudo killall virt-viewer
+	xdotool search --title "oleg" | head -1 | xargs xdotool windowfocus
+	su -c "getwork $ip" oleg
+	echo 'Now you can work, IP: 10.90.140.'$ip
+	su -c "getmgr $ip" oleg
+	return 0
+}
+
+showhelp() {
+	echo "Использование: `basename $0`' <продукт> [<версия> <билд>] [опции]'"
+	echo "Аргументы:"
+	echo "	--help"
+	echo "		Показать эту страницу"
+	echo "	--name  <Имя виртуалки>"
+	echo "		Устанавливает имя виртуальной машины в virt-manager"
+	echo "	--owner <Владелец виртуалки>"
+	echo "		Правит префикс владельца в имени виртуальной машины"
+
+}
+
+[ "$1" = '--help' ] && showhelp && exit 44
+[ "$#" = '0' ] && showhelp
+
+
+DEBUG='0'
+SRV='10.90.1.120'
+PRODUCT='IdecoASR'
+FPRODUCT='IdecoACP'
+QEMU='/qemu/img/'
+STORAGE='/storage/iso'
+parse "$@"
