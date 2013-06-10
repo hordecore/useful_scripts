@@ -18,7 +18,7 @@ void *func(void *arg)
 int main(void)
 {
 	int i;
-	unsigned int cpu_count = get_cpu_count();
+	int cpu_count = get_cpu_count();
 	pthread_t t[cpu_count];
 
 	/* and no, you should not use one for-loop */
