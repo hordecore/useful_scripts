@@ -27,7 +27,6 @@ opts_parse() {
 }
 
 main() {
-        opts_parse $@
         #add your logic here
         if [ "$#" = 0 ]; then
                 terminate 1 "Пример - сделано ничего, несмотря на вызов с параметрами $@, попробуйте --help"
@@ -35,5 +34,6 @@ main() {
         fi
 }
 
+opts_parse $@
 main $@
 cat $TMPLOG >> $LOGFILE
