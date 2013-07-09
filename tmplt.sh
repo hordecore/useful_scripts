@@ -19,11 +19,13 @@ LOG() {
 }
 
 opts_parse() {
-        if [ "$1" = '--help' -o "$1" = '--usage' -o "$1" = '-h' ]; then
-                echo 'Usage:'
-                printf "%30s" ' --help | --usage | -h'
-                echo 'Show this message'
-        fi
+        case $1 in
+                '--help' | '--usage' | '-h' )
+                        echo 'Usage:'
+                        printf "%30s" ' --help | --usage | -h'
+                        echo 'Show this message'
+                        ;;
+        esac
 }
 
 main() {
