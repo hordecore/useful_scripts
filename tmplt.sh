@@ -1,21 +1,19 @@
 #!/bin/bash
 
-TMPLOG=/tmp/$(basename $0).log
+TMPLOG=/tmp/${0##*/}.log
 > $TMPLOG
-LOGILE=/var/log/$(basename $0).log
+LOGILE=/var/log/${0##*/}.log
 
 terminate() {
-        local retval=$1
-        shift
-        echo "$@"
-        echo
-        cat $TMPLOG >> $LOGFILE
+        local retval=$1; shift
+        echo -e "$@\n"
+        cat "$TMPLOG" >> "$LOGFILE"
         rm -f "$TMPLOG"
         exit $retval
 }
 
 LOG() {
-        echo $@ >> $TMPLOG
+        echo $@ >> "$TMPLOG"
 }
 
 opts_parse() {
