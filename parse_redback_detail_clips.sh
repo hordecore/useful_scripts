@@ -9,5 +9,5 @@ get_parsed_nomoney_list() {
                         echo $id $ip $redirect
                         unset id ip redirect policy
                 fi
-        done < /var/lib/event/files2/clips_detail.txt | sort
+        done < /var/lib/event/files2/clips_detail.txt
 }
