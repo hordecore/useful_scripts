@@ -5,6 +5,9 @@ get_parsed_nomoney_list() {
                 [[ "$line" = *Circuit*clips* ]] id=${line##* }
                 [[ "$line" = *HTTP-REDIRECT* ]] && policy=1
                 [[ "$line" = *http-redirect-url* ]] && redirect="${line#* }" && redirect=${redirect% *}
-                [ "$redirect" = 'http://10.0.0.100/nomoney' -a "$policy" = '1' ] && echo $id $ip $redirect && unset id ip redirect policy
+                if [ "$redirect" = 'http://10.0.0.100/nomoney' -a "$policy" = '1' ]; then
+                        echo $id $ip $redirect
+                        unset id ip redirect policy
+                fi
         done < /var/lib/event/files2/clips_detail.txt | sort
 }
