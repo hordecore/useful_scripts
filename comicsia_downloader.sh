@@ -22,6 +22,7 @@ done < tmp/$comix.pages.list
 
 egrep -h -o http://.*.jpeg tmp/oglaf.pages/* > tmp/$comix.images.list
 
+# hard but fast way to do 3 threads, lol, yeah I know about 'for'
 while read line1; do
         read line2
         read line3
