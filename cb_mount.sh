@@ -11,17 +11,17 @@ __mount() {
 	sudo modprobe nbd max_part=10
 	sudo qemu-nbd -c /dev/nbd0 $disk
 	sudo mkdir -p /mnt/{appfs,basefs,bkfs,datafs,etcfs,logfs}
-	sudo mount /dev/nbd0p2 /mnt/appfs
 	sudo mount /dev/nbd0p1 /mnt/basefs
+	sudo mount /dev/nbd0p2 /mnt/appfs
 	sudo mount /dev/nbd0p3 /mnt/bkfs
-	sudo mount /dev/nbd0p5 /mnt/datafs
 	sudo mount /dev/nbd0p4 /mnt/etcfs
+	sudo mount /dev/nbd0p5 /mnt/datafs
 	sudo mount /dev/nbd0p6 /mnt/logfs
 }
 
 __umount() {
-	for mount in /mnt/{appfs,basefs,bkfs,datafs,etcfs,logfs}; do
-		sudo umount -f $mount
+	for mount in appfs basefs bkfs datafs etcfs logfs; do
+		sudo umount -f /mnt/$mount
 	done
 }
 
