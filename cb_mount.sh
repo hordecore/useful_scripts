@@ -2,6 +2,7 @@
 
 # mount carbon billing 5 / carbon xge router 5 qcow2 disk in host system
 # usage: cb_mount.sh /qemu/img/Carbon_Billing_devel.qcow2
+# 	 cb_mount.sh -u
 
 set -eux
 
