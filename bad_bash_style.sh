@@ -2,23 +2,40 @@
 
 tmpfile=/tmp/bash_tmp_file
 
-for i in ${1:-.}/*; do
-	wc -l $i 2>/dev/null
-done | while read num file; do
-	> $tmpfile
+file_list() {
+	for i in $1/*; do
+		wc -l $i 2>/dev/null
+	done
+}
+
+long_file() {
 	if [ "$num" -gt 100 ]; then
-		echo "- more than 100 lines long" >> $tmpfile
+		echo "- more than 100 lines long"
 	fi
+}
 
+long_lines() {
 	if egrep -q '^.{80,}$' $file; then
-		echo "- have longer than 80 symbols in line" >> $tmpfile
+		echo "- have longer than 80 symbols in line"
 	fi
+}
 
-	if [ -s $tmpfile ]; then
-		echo "# $file"
-		cat $tmpfile
+show_output() {
+	if [ -s "${1:-$tmpfile}" ]; then
+		echo "# ${2:-$file}"
+		cat "${1:-$tmpfile}"
 		echo
 	fi
+}
 
-	rm -f $tmpfile
-done
+analyse() {
+	while read num file; do
+		> $tmpfile
+		long_file >> $tmpfile
+		long_lines >> $tmpfile
+		show_output $tmpfile $file
+		rm -f $tmpfile
+	done
+}
+
+file_list "${1:-.}" | analyse
