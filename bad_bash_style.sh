@@ -20,6 +20,10 @@ long_lines() {
 	fi
 }
 
+trailing_spaces() {
+	egrep -q '(\t| )+$' $file && echo '- have trailing spaces'
+}
+
 show_output() {
 	if [ -s "${1:-$tmpfile}" ]; then
 		echo "# ${2:-$file}"
@@ -33,6 +37,7 @@ analyse() {
 		> $tmpfile
 		long_file >> $tmpfile
 		long_lines >> $tmpfile
+		trailing_spaces >> $tmpfile
 		show_output $tmpfile $file
 		rm -f $tmpfile
 	done
