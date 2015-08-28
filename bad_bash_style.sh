@@ -9,15 +9,11 @@ file_list() {
 }
 
 long_file() {
-	if [ "$num" -gt 100 ]; then
-		echo "- more than 100 lines long"
-	fi
+	[ "$num" -gt 100 ] && echo "- more than 100 lines long"
 }
 
 long_lines() {
-	if egrep -q '^.{80,}$' $file; then
-		echo "- have longer than 80 symbols in line"
-	fi
+	egrep -q '^.{80,}$' $file && echo "- have longer than 80 symbols in line"
 }
 
 show_output() {
